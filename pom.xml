@@ -136,6 +136,11 @@
             <version>${pass.java.client.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.dataconservancy.pass</groupId>
+            <artifactId>pass-client-api</artifactId>
+            <version>${pass.java.client.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.glassfish</groupId>
             <artifactId>javax.json</artifactId>
             <version>${javax.json.version}</version>
