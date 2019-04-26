@@ -14,7 +14,6 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-package pass.doi.service.core;
 
 import okhttp3.Call;
 import okhttp3.HttpUrl;
@@ -190,8 +189,8 @@ public class PassDoiServlet extends HttpServlet {
                             .toString();
                     out.write(jsonString.getBytes());
                     response.setStatus(422);
-                 }
-             }
+                }
+            }
         }
         activeJobs.remove(doi);
     }
@@ -425,5 +424,32 @@ public class PassDoiServlet extends HttpServlet {
             }
         }
 
+    }
+
+    public enum IssnType {
+        PRINT,
+        ELECTRONIC;
+
+        private String passTypeString;
+
+        static {// these values represent how types are stored on the issn field for the PASS Journal object
+            PRINT.passTypeString = "Print";
+            ELECTRONIC.passTypeString = "Online";
+        }
+
+        public String getPassTypeString() {
+            return passTypeString;
+        }
+
+        private String crossrefTypeString;
+
+        static {// these values represent how issn types are presented in Crossref metadata
+            PRINT.crossrefTypeString = "print";
+            ELECTRONIC.crossrefTypeString = "electronic";
+        }
+
+        public String getCrossrefTypeString() {
+            return crossrefTypeString;
+        }
     }
 }

@@ -14,8 +14,6 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-package pass.doi.service.core;
-
 import org.dataconservancy.pass.client.PassClient;
 import org.dataconservancy.pass.client.PassJsonAdapter;
 import org.dataconservancy.pass.client.adapter.PassJsonAdapterBasic;
@@ -49,15 +47,15 @@ public class PassDoiServiceTest {
     private Journal completeJournal;
     private Journal missingNameJournal;
 
-    private String issn1 = String.join(":", IssnType.PRINT.getPassTypeString(), "0000-0001");
-    private String issn2 = String.join(":", IssnType.ELECTRONIC.getPassTypeString(), "0000-0002");
+    private String issn1 = String.join(":", PassDoiServlet.IssnType.PRINT.getPassTypeString(), "0000-0001");
+    private String issn2 = String.join(":", PassDoiServlet.IssnType.ELECTRONIC.getPassTypeString(), "0000-0002");
 
-    private String issn3 = String.join(":", IssnType.ELECTRONIC.getPassTypeString(), "0000-0003");
-    private String issn4 = String.join(":", IssnType.ELECTRONIC.getPassTypeString(), "0000-0004");
+    private String issn3 = String.join(":", PassDoiServlet.IssnType.ELECTRONIC.getPassTypeString(), "0000-0003");
+    private String issn4 = String.join(":", PassDoiServlet.IssnType.ELECTRONIC.getPassTypeString(), "0000-0004");
 
 
-    private String issn5 = String.join(":", IssnType.ELECTRONIC.getPassTypeString(), "0000-0005");
-    private String issn6 = String.join(":", IssnType.ELECTRONIC.getPassTypeString(), "0000-0006");
+    private String issn5 = String.join(":", PassDoiServlet.IssnType.ELECTRONIC.getPassTypeString(), "0000-0005");
+    private String issn6 = String.join(":", PassDoiServlet.IssnType.ELECTRONIC.getPassTypeString(), "0000-0006");
 
     private URI completeId = URI.create("http://example.org:2020/" + UUID.randomUUID().toString());
     private URI missingNameId = URI.create("http://example.org:2020/" + UUID.randomUUID().toString());
