@@ -142,7 +142,7 @@ public class PassDoiServlet extends HttpServlet {
         if (xrefJsonString == null) {
             try (OutputStream out = response.getOutputStream()) {
                 String jsonString = Json.createObjectBuilder()
-                        .add("error", "There was an IO exception opening the output stream for the Crossref request for " + doi)
+                        .add("error", "There was an error getting the metadata from Crossref for " + doi)
                         .build()
                         .toString();
                 out.write(jsonString.getBytes());
@@ -210,17 +210,17 @@ public class PassDoiServlet extends HttpServlet {
                 .addHeader("User-Agent", MAILTO)
                 .build();
         Call call = client.newCall(okHttpRequest);
-        StringBuffer stringBuffer = new StringBuffer();
+        StringBuilder stringBuilder = new StringBuilder();
         try (Response okHttpResponse = call.execute()) {
             String line;
             BufferedReader reader = new BufferedReader(okHttpResponse.body().charStream());
             while ((line = reader.readLine()) != null) {
-                stringBuffer.append(line);
+                stringBuilder.append(line);
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             return null;
         }
-        return stringBuffer.toString();
+        return stringBuilder.toString();
     }
 
     /**
