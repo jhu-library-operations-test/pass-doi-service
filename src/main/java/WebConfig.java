@@ -25,7 +25,7 @@ import org.springframework.context.annotation.Configuration;
 public class WebConfig {
 
     @Bean
-    public ServletRegistrationBean<HttpServlet> journalServlet() {
+    public ServletRegistrationBean<HttpServlet> doiServlet() {
         ServletRegistrationBean<HttpServlet> servRegBean = new ServletRegistrationBean<>();
         servRegBean.setServlet(new PassDoiServlet());
         servRegBean.addUrlMappings("/doiServlet");
