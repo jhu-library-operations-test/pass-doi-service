@@ -16,3 +16,7 @@ information about the corresponding journal. We then check to see if there is a
 returns to the caller a JSON object containing the `journal-id` of the PASS journal, 
 and a `crossref` object representing the data returned to the service as a result of the Crossref call.
 
+## Configuration
+The service will look for an environment variable called PASS_DOI_SERVICE_MAILTO to 
+specify a value on the User-Agent header on the Crossref request. If not present, the default is 
+`pass@jhu.edu`.

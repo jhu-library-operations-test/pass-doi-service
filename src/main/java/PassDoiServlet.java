@@ -203,11 +203,13 @@ public class PassDoiServlet extends HttpServlet {
      * @return a string representing the works object if successful; an empty string if not found; null if IO exception
      */
     String retrieveXrefMetdata(String doi) {
+        String agent = System.getenv("PASS_DOI_SERVICE_MAILTO") != null ? System.getenv("PASS_DOI_SERVICE_MAILTO")  : MAILTO;
+
         HttpUrl.Builder urlBuilder = HttpUrl.parse(BASE_URL + VERSION + BASIC_PREFIX + doi).newBuilder();
         String url = urlBuilder.build().toString();
         Request okHttpRequest = new Request.Builder()
                 .url(url)
-                .addHeader("User-Agent", MAILTO)
+                .addHeader("User-Agent", agent)
                 .build();
         Call call = client.newCall(okHttpRequest);
         StringBuilder stringBuilder = new StringBuilder();
