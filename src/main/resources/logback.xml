@@ -28,7 +28,7 @@
         <appender-ref ref="STDOUT" />
     </logger>
 
-    <root additivity="false" level="WARN">
+    <root>
         <appender-ref ref="STDOUT" />
     </root>
 
