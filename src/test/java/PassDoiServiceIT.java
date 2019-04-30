@@ -24,66 +24,58 @@ import okhttp3.Response;
 import org.junit.Test;
 
 import javax.json.Json;
+import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonReader;
 
 import java.io.StringReader;
 
 
-import static org.junit.Assert.assertEquals;
+import static java.lang.Thread.sleep;
+import static org.junit.Assert.*;
 
 public class PassDoiServiceIT {
 
-    private static final String doiServiceUrl = "http://localhost:8080/doiServlet";
+    private static final String doiServiceUrl = "http://localhost:8080/pass-doi-service/doiServlet";
 
     OkHttpClient client = new OkHttpClient();
-    JsonReader jsonReader;
 
     @Test
-    public void smokeTest() throws Exception{
+    public void smokeTest() throws Exception {
         HttpUrl.Builder urlBuilder = HttpUrl.parse(doiServiceUrl).newBuilder().addQueryParameter("doi", "moo");
         String url = urlBuilder.build().toString();
         Request okHttpRequest = new Request.Builder()
                 .url(url)
                 .build();
         Call call = client.newCall(okHttpRequest);
-        StringBuffer stringBuffer = new StringBuffer();
         try (Response okHttpResponse = call.execute()) {
-            System.err.println(okHttpRequest.toString());
-            // assertEquals(400, okHttpResponse.code());
-            //jsonReader = Json.createReader(new StringReader(okHttpResponse.body().string()));
-            //JsonObject errorReport = jsonReader.readObject();
-            //JsonObject errorObject = errorReport.getJsonObject("error");
-            //assertEquals("Supplied DOI is not in valid Crossref format.", errorObject.getString("error"));
-            System.err.println(okHttpResponse.body().string());
+            assertEquals(400, okHttpResponse.code());
+            assertEquals("{\"error\":\"Supplied DOI is not in valid Crossref format.\"}",
+                    okHttpResponse.body().string());
         }
     }
 
     @Test
-    public void noSuchXrefObjectTest() throws Exception{
-        HttpUrl.Builder urlBuilder = HttpUrl.parse(doiServiceUrl).newBuilder().addQueryParameter("doi", "10.1234.xyz.ABC");
+    public void noSuchXrefObjectTest() throws Exception {
+        HttpUrl.Builder urlBuilder = HttpUrl.parse(doiServiceUrl).newBuilder().addQueryParameter("doi", "10.1234/w.xyz.ABC");
         String url = urlBuilder.build().toString();
         Request okHttpRequest = new Request.Builder()
                 .url(url)
                 .build();
         Call call = client.newCall(okHttpRequest);
-        StringBuffer stringBuffer = new StringBuffer();
         try (Response okHttpResponse = call.execute()) {
-            System.err.println(okHttpRequest.toString());
-            // assertEquals(404, okHttpResponse.code());
-            //jsonReader = Json.createReader(new StringReader(okHttpResponse.body().string()));
-            //JsonObject errorReport = jsonReader.readObject();
-            //JsonObject errorObject = errorReport.getJsonObject("error");
-            //assertEquals("The resource for this DOI could not be found on Crossref.", errorObject.getString("error"));
-            System.err.println(okHttpResponse.body().string());
+            assertEquals(404, okHttpResponse.code());
+            assertEquals("{\"error\":\"The resource for this DOI could not be found on Crossref.\"}",
+                    okHttpResponse.body().string());
         }
     }
 
     @Test
-    public void normalBehaviorTest() throws Exception{
+    public void normalBehaviorTest() throws Exception {
 
         String realDoi = "10.4137/cmc.s38446";
         String id = "";
+        String crossref = "";
 
         HttpUrl.Builder urlBuilder = HttpUrl.parse(doiServiceUrl).newBuilder().addQueryParameter("doi", realDoi);
         String url = urlBuilder.build().toString();
@@ -91,29 +83,35 @@ public class PassDoiServiceIT {
                 .url(url)
                 .build();
         Call call = client.newCall(okHttpRequest);
-        StringBuffer stringBuffer = new StringBuffer();
+        JsonReader jsonReader;
+
         try (Response okHttpResponse = call.execute()) {
-            System.err.println(okHttpRequest.toString());
-            // assertEquals(200, okHttpResponse.code());
-            // jsonReader = Json.createReader(new StringReader(okHttpResponse.body().string()));
-            // JsonObject successReport = jsonReader.readObject();
-            // JsonObject idObject = successReport.getJsonObject("id");
-            // id = idObject.getString("id");
-            System.err.println(okHttpResponse.body().string());
+            assertEquals(200, okHttpResponse.code());
+            jsonReader = Json.createReader(new StringReader(okHttpResponse.body().string()));
+            JsonObject successReport = jsonReader.readObject();
+            id = successReport.getString("journal-id");
+            crossref = successReport.getString("crossref");
+            assertFalse(id.isEmpty());
+            assertFalse(crossref.isEmpty());
         }
+
+        sleep(60000);
 
         //second time around should give the same id
+        urlBuilder = HttpUrl.parse(doiServiceUrl).newBuilder().addQueryParameter("doi", realDoi);
+        url = urlBuilder.build().toString();
+        okHttpRequest = new Request.Builder()
+                .url(url)
+                .build();
+        call = client.newCall(okHttpRequest);
         try (Response okHttpResponse = call.execute()) {
-            System.err.println(okHttpRequest.toString());
-            //  assertEquals(200, okHttpResponse.code());
-            // jsonReader = Json.createReader(new StringReader(okHttpResponse.body().string()));
-            // JsonObject successReport = jsonReader.readObject();
-            // JsonObject idObject = successReport.getJsonObject("id");
-            // assertEquals(id, idObject.get(id));
-            System.err.println(okHttpResponse.body().string());
+            assertEquals(200, okHttpResponse.code());
+            jsonReader = Json.createReader(new StringReader(okHttpResponse.body().string()));
+            JsonObject successReport = jsonReader.readObject();
+            assertEquals(id, successReport.getString("journal-id"));
+            assertEquals(crossref, successReport.getString("crossref"));
         }
     }
-
 
 }
 

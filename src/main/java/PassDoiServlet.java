@@ -142,7 +142,7 @@ public class PassDoiServlet extends HttpServlet {
         if (xrefJsonString == null) {
             try (OutputStream out = response.getOutputStream()) {
                 String jsonString = Json.createObjectBuilder()
-                        .add("error", "There was an IO exception opening the output stream for the Crossref request for " + doi)
+                        .add("error", "There was an error getting the metadata from Crossref for " + doi)
                         .build()
                         .toString();
                 out.write(jsonString.getBytes());
@@ -210,17 +210,17 @@ public class PassDoiServlet extends HttpServlet {
                 .addHeader("User-Agent", MAILTO)
                 .build();
         Call call = client.newCall(okHttpRequest);
-        StringBuffer stringBuffer = new StringBuffer();
+        StringBuilder stringBuilder = new StringBuilder();
         try (Response okHttpResponse = call.execute()) {
             String line;
             BufferedReader reader = new BufferedReader(okHttpResponse.body().charStream());
             while ((line = reader.readLine()) != null) {
-                stringBuffer.append(line);
+                stringBuilder.append(line);
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             return null;
         }
-        return stringBuffer.toString();
+        return stringBuilder.toString();
     }
 
     /**
@@ -299,16 +299,10 @@ public class PassDoiServlet extends HttpServlet {
             } else {//do not have enough to create a new journal
                 return null;
             }
-        } else { //we have a journal, let's see if we can add anything new - title or issns. we add only if not present
+        } else { //we have a journal, let's see if we can add anything new - just issns atm. we add only if not present
             boolean update = false;
             passJournal = passClient.readResource(passJournalUri, Journal.class);
             if (passJournal != null) {
-
-                //check to see if we can supply a journal name
-                if ((passJournal.getName() == null || passJournal.getName().isEmpty()) && (!(journal.getName() == null) && !journal.getName().isEmpty())) {
-                    passJournal.setName(journal.getName());
-                    update = true;
-                }
 
                 //check to see if we can supply issns
                 if (!passJournal.getIssns().containsAll(journal.getIssns())) {
@@ -332,7 +326,7 @@ public class PassDoiServlet extends HttpServlet {
      * Find a journal in our repository. We take the best match we can find. finder algorithm here should harmonize
      * with the approach in the {@code BatchJournalFinder} in the journal loader code
      * @param name the name of the journal to be found
-     * @param issns the set of issns to find. we assume that the issns stored in the repo are og the format type:value
+     * @param issns the set of issns to find. we assume that the issns stored in the repo are of the format type:value
      * @return the URI of the best match, or null in nothing matches
      */
     URI find(String name, List<String> issns) {

@@ -138,7 +138,6 @@ public class PassDoiServiceTest {
 
         when(passClientMock.findAllByAttribute(Journal.class, "issns", issn1)).thenReturn(new HashSet<>(Collections.singleton(completeId)));
         when(passClientMock.findAllByAttribute(Journal.class, "issns", issn2)).thenReturn(new HashSet<>(Collections.singleton(completeId)));
-        when(passClientMock.findAllByAttribute(Journal.class, "issns", issn3)).thenReturn(new HashSet<>(Collections.singleton(missingNameId)));
         when(passClientMock.findAllByAttribute(Journal.class, "issns", issn4)).thenReturn(new HashSet<>(Collections.singleton(missingNameId)));
         when(passClientMock.findAllByAttribute(Journal.class, "issns", issn5)).thenReturn(new HashSet<>(Collections.singleton(missingOneIssnId)));
 
@@ -209,18 +208,6 @@ public class PassDoiServiceTest {
         assertTrue(completeJournal.getIssns().contains(issn1));
         assertTrue(completeJournal.getIssns().contains(issn1));
         assertEquals(completeJournal.getNlmta(), newJournal.getNlmta());
-
-
-        //test that a Pass journal missing its name will get it populated from the xref journal
-        xrefJournal = new Journal();
-        xrefJournal.getIssns().add(issn3);
-        xrefJournal.getIssns().add(issn4);
-        xrefJournal.setName("Advanced Research in Animal Husbandry");
-
-        newJournal = underTest.updateJournalInPass(xrefJournal);
-        assertEquals(missingNameJournal.getIssns(), newJournal.getIssns());
-        assertEquals(xrefJournal.getName(), newJournal.getName());
-        assertEquals(nlmta, newJournal.getNlmta());
 
         //test that a Pass journal with only one issn will have a second one added if the xref journal has two
         xrefJournal = new Journal();
