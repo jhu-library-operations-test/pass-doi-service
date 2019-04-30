@@ -113,7 +113,7 @@ public class PassDoiServiceTest {
 
         completeJournal = new Journal();
         completeJournal.setId(completeId);
-        completeJournal.setName(journalName);
+        completeJournal.setJournalName(journalName);
 
         completeJournal.setNlmta(nlmta);
         completeJournal.setIssns(issnListComplete);
@@ -126,7 +126,7 @@ public class PassDoiServiceTest {
         Journal missingOneIssnJournal = new Journal();
         missingOneIssnJournal.setId(missingOneIssnId);
         missingOneIssnJournal.setNlmta(nlmta);
-        missingOneIssnJournal.setName(journalName);
+        missingOneIssnJournal.setJournalName(journalName);
         missingOneIssnJournal.setIssns(issnListOneIssn);
 
 
@@ -160,7 +160,7 @@ public class PassDoiServiceTest {
     public void buildPassJournalTest() {
         Journal passJournal = underTest.buildPassJournal(xrefJson);
 
-        assertEquals("Clinical Medicine Insights: Cardiology", passJournal.getName());
+        assertEquals("Clinical Medicine Insights: Cardiology", passJournal.getJournalName());
         assertEquals(2, passJournal.getIssns().size());
         assertTrue(passJournal.getIssns().contains("Print:1179-5468"));
         assertTrue(passJournal.getIssns().contains("Online:1179-5468"));
@@ -176,21 +176,21 @@ public class PassDoiServiceTest {
         //first test that if a journal is not found, that a new one is created:
         Journal xrefJournal = new Journal();
         xrefJournal.getIssns().add("MOO");
-        xrefJournal.setName("Advanced Research in Animal Husbandry");
+        xrefJournal.setJournalName("Advanced Research in Animal Husbandry");
 
         Journal newJournal = underTest.updateJournalInPass(xrefJournal);
 
         assertEquals(xrefJournal.getIssns(), newJournal.getIssns());
-        assertEquals(xrefJournal.getName(), newJournal.getName());
+        assertEquals(xrefJournal.getJournalName(), newJournal.getJournalName());
 
         //test that a journal not needing an update does not change in PASS
         xrefJournal = new Journal();
         xrefJournal.getIssns().add(issn1);
         xrefJournal.getIssns().add(issn2);
-        xrefJournal.setName(journalName);
+        xrefJournal.setJournalName(journalName);
 
         newJournal = underTest.updateJournalInPass(xrefJournal);
-        assertEquals(completeJournal.getName(), newJournal.getName());
+        assertEquals(completeJournal.getJournalName(), newJournal.getJournalName());
         assertEquals(completeJournal.getIssns(), newJournal.getIssns());
         assertEquals(completeJournal.getNlmta(), newJournal.getNlmta());
 
@@ -199,11 +199,11 @@ public class PassDoiServiceTest {
         //from its second issn)
         xrefJournal = new Journal();
         xrefJournal.getIssns().add(issn2);
-        xrefJournal.setName("Advanced Research in Animal Husbandry");
+        xrefJournal.setJournalName("Advanced Research in Animal Husbandry");
 
         newJournal = underTest.updateJournalInPass(xrefJournal);
         assertEquals(completeJournal.getId(), newJournal.getId());
-        assertEquals(completeJournal.getName(), newJournal.getName());
+        assertEquals(completeJournal.getJournalName(), newJournal.getJournalName());
         assertEquals(2, completeJournal.getIssns().size());
         assertTrue(completeJournal.getIssns().contains(issn1));
         assertTrue(completeJournal.getIssns().contains(issn1));
@@ -223,7 +223,7 @@ public class PassDoiServiceTest {
         //test that an xref journal with only one issn will find its match in a pass journal containing two issns
         xrefJournal = new Journal();
         xrefJournal.getIssns().add(issn4);
-        xrefJournal.setName("Advanced Research in Animal Husbandry");
+        xrefJournal.setJournalName("Advanced Research in Animal Husbandry");
 
         newJournal = underTest.updateJournalInPass(xrefJournal);
         assertEquals(2, newJournal.getIssns().size());

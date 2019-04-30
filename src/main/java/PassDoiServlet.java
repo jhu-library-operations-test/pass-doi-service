@@ -58,7 +58,7 @@ import java.util.stream.Stream;
 import static java.lang.Thread.sleep;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
-@WebServlet(urlPatterns = "/doiServlet")
+@WebServlet(urlPatterns = "/journal")
 public class PassDoiServlet extends HttpServlet {
 
     private static final Logger LOG = LoggerFactory.getLogger(PassDoiServlet.class);
@@ -249,7 +249,7 @@ public class PassDoiServlet extends HttpServlet {
         JsonArray issnTypeArray = messageObject.getJsonArray(XREF_ISSN_TYPE_ARRAY);
 
         if (!containerTitleArray.isNull(0)) {
-            passJournal.setName(containerTitleArray.getString(0));
+            passJournal.setJournalName(containerTitleArray.getString(0));
         }
 
         for (int i=0; i < issnTypeArray.size(); i++) {
@@ -287,7 +287,7 @@ public class PassDoiServlet extends HttpServlet {
      */
     Journal updateJournalInPass(Journal journal) {
         List<String> issns = journal.getIssns();
-        String name = journal.getName();
+        String name = journal.getJournalName();
 
         Journal passJournal;
 
@@ -315,7 +315,9 @@ public class PassDoiServlet extends HttpServlet {
                     passClient.updateResource(passJournal);
                 }
             } else {
-                throw new RuntimeException("URI for journal was found, but the object could not be retrieved. This should never happen.");
+                String uhoh = "Journal URI " + passJournalUri + " was found, but the object could not be retrieved. This should never happen.";
+                LOG.error(uhoh);
+                throw new RuntimeException(uhoh);
             }
 
         }
