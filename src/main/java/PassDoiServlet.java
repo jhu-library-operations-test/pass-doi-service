@@ -237,6 +237,7 @@ public class PassDoiServlet extends HttpServlet {
         final String XREF_MESSAGE = "message";
         final String XREF_TITLE = "container-title";
         final String XREF_ISSN_TYPE_ARRAY = "issn-type";
+        final String XREF_ISSN_ARRAY = "ISSN";
         final String XREF_ISSN_TYPE = "type";
         final String XREF_ISSN_VALUE = "value";
 
@@ -249,11 +250,13 @@ public class PassDoiServlet extends HttpServlet {
         JsonObject messageObject = crossrefMetadata.getJsonObject(XREF_MESSAGE);
         JsonArray containerTitleArray = messageObject.getJsonArray(XREF_TITLE);
         JsonArray issnTypeArray = messageObject.getJsonArray(XREF_ISSN_TYPE_ARRAY);
+        JsonArray issnArray = messageObject.getJsonArray(XREF_ISSN_ARRAY);
 
         if (!containerTitleArray.isNull(0)) {
             passJournal.setJournalName(containerTitleArray.getString(0));
         }
 
+        Set<String> processedIssns = new HashSet<>();
         for (int i=0; i < issnTypeArray.size(); i++) {
             JsonObject issn = issnTypeArray.getJsonObject(i);
 
@@ -268,9 +271,17 @@ public class PassDoiServlet extends HttpServlet {
 
             //collect the value for this issn
             String value = issn.getString(XREF_ISSN_VALUE);
+            processedIssns.add(value);
 
             if (value.length() > 0) {
                 passJournal.getIssns().add(String.join(":", type, value));
+            }
+        }
+
+        for (int i=0; i < issnArray.size(); i++) {//if we have issns which were not given as typed, we add them without a type
+            String issn = issnArray.getString(i);
+            if (!processedIssns.contains(issn)) {
+                passJournal.getIssns().add(":" + issn);//do this to normalize type:value format
             }
         }
 
