@@ -1,0 +1,399 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.dataconservancy.pass</groupId>
+    <artifactId>pass-doi-service</artifactId>
+    <version>0.0.1</version>
+
+    <packaging>war</packaging>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.1.4.RELEASE</version>
+    </parent>
+
+    <licenses>
+        <license>
+            <name>The Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>Jim Martino</name>
+            <email>jrm@jhu.edu</email>
+            <organization>Johns Hopkins University, Sheridan Libraries, Digital Research and Curation Center
+            </organization>
+            <organizationUrl>https://www.library.jhu.edu/library-departments/digital-research-curation-center/
+            </organizationUrl>
+        </developer>
+    </developers>
+
+    <properties>
+        <!-- general properties -->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <!-- build properties -->
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+
+        <!-- plugin versions -->
+        <build-helper-maven-plugin.version>3.0.0</build-helper-maven-plugin.version>
+        <fabric8.docker.maven.plugin.version>0.30.0</fabric8.docker.maven.plugin.version>
+        <maven.compiler.plugin.version>3.8.0</maven.compiler.plugin.version>
+        <maven.failsafe.plugin.version>2.22.0</maven.failsafe.plugin.version>
+        <maven.javadoc.plugin.version>3.0.1</maven.javadoc.plugin.version>
+        <maven.jar.plugin.version>3.1.1</maven.jar.plugin.version>
+        <maven.release.plugin.version>2.5.3</maven.release.plugin.version>
+        <maven.surefire.plugin.version>2.22.0</maven.surefire.plugin.version>
+        <maven-source-plugin.version>3.0.1</maven-source-plugin.version>
+
+        <!-- dependency versions -->
+        <javax.json.version>1.1.4</javax.json.version>
+        <javax.json.api.version>1.1.4</javax.json.api.version>
+        <javax.servlet.version>4.0.1</javax.servlet.version>
+        <junit.version>4.12</junit.version>
+        <logback-classic.version>1.2.3</logback-classic.version>
+        <mockito.version>2.27.0</mockito.version>
+        <okhttp.version>3.14.1</okhttp.version>
+        <pass.java.client.version>0.5.3</pass.java.client.version>
+        <pass.model.version>3.1.1</pass.model.version>
+        <slf4j.version>1.7.25</slf4j.version>
+
+        <!-- integration test dependency versions -->
+        <docker.fcrepo.version>oapass/fcrepo:4.7.5-3.2-2</docker.fcrepo.version>
+        <docker.indexer.version>oapass/indexer@sha256:e51092a9d433219d52207f1ec3f5ea7c652d51f516bcbe9434dae556b921546d</docker.indexer.version>
+        <docker.elasticsearch.version>docker.elastic.co/elasticsearch/elasticsearch-oss:6.2.3</docker.elasticsearch.version>
+
+        <!-- other integration test related properties -->
+        <pass.jsonld.context>https://oa-pass.github.io/pass-data-model/src/main/resources/context-3.2.jsonld</pass.jsonld.context>
+        <fcrepo.skip>false</fcrepo.skip>
+        <indexer.skip>false</indexer.skip>
+        <fcrepo.server>${docker.host.address}</fcrepo.server>
+        <pass.fedora.user>fedoraAdmin</pass.fedora.user>
+        <pass.fedora.password>moo</pass.fedora.password>
+        <pass.fedora.baseurl>http://${docker.host.address}:${fcrepo.http.port}/fcrepo/rest/</pass.fedora.baseurl>
+        <fcrepo.jms.baseurl>http://fcrepo:${fcrepo.http.port}/fcrepo/rest/</fcrepo.jms.baseurl>
+        <pass.elasticsearch.host>${docker.host.address}</pass.elasticsearch.host>
+        <pass.elasticsearch.url>http://${pass.elasticsearch.host}:${es.port}/pass/</pass.elasticsearch.url>
+        <pass.elasticsearch.limit>100</pass.elasticsearch.limit>
+        <pass.doi.service.port>8080</pass.doi.service.port>
+    </properties>
+
+    <profiles>
+        <profile>
+            <id>external-fcrepo-server</id>
+            <activation>
+                <property>
+                    <name>fcrepo.server</name>
+                </property>
+            </activation>
+            <properties>
+                <fcrepo.skip>true</fcrepo.skip>
+                <pass.fedora.baseurl>http://${fcrepo.server}:${fcrepo.http.port}/fcrepo/rest/</pass.fedora.baseurl>
+            </properties>
+        </profile>
+        <profile>
+            <id>standard</id>
+            <activation>
+                <property>
+                    <name>standard</name>
+                </property>
+            </activation>
+            <properties>
+                <fcrepo.http.port>8080</fcrepo.http.port>
+                <fcrepo.jms.port>61616</fcrepo.jms.port>
+                <es.port>9200</es.port>
+            </properties>
+        </profile>
+    </profiles>
+
+    <build>
+        <finalName>pass-doi-service</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>${build-helper-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>reserve-network-port</id>
+                        <goals>
+                            <goal>reserve-network-port</goal>
+                        </goals>
+                        <phase>pre-integration-test</phase>
+                        <configuration>
+                            <portNames>
+                                <portName>fcrepo.http.port</portName>
+                                <portName>fcrepo.jms.port</portName>
+                                <portName>fcrepo.stomp.port</portName>
+                                <portName>es.port</portName>
+                            </portNames>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>io.fabric8</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <version>${fabric8.docker.maven.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>build-before-its</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>build</goal>
+                            <goal>start</goal>
+                        </goals>
+                        <configuration>
+                            <autoCreateCustomNetworks>true</autoCreateCustomNetworks>
+                            <startParallel>true</startParallel>
+                            <imagePullPolicy>IfNotPresent</imagePullPolicy>
+                            <images>
+                                <image>
+                                    <!-- Production image: built, but not run -->
+                                    <name>doi-service</name>
+                                    <build>
+                                        <contextDir>${project.basedir}</contextDir>
+                                        <dockerFile>Dockerfile</dockerFile>
+                                    </build>
+                                    <run>
+                                        <skip>true</skip>
+                                    </run>
+                                </image>
+                                <image>
+                                    <!-- IT image derived from production image above: used to build, and provides the
+                                         Deposit Services runtime for ITs -->
+                                    <!-- This container is not exposed to the IT runtime; ITs only communicate with
+                                         Fedora; they submit content to Fedora and inspect the generated packages
+                                         created by this image -->
+                                    <name>doi-service-its</name>
+                                    <build>
+                                        <contextDir>${project.basedir}</contextDir>
+                                        <dockerFile>Dockerfile-ITs</dockerFile>
+                                    </build>
+                                    <run>
+                                        <skip>false</skip>
+                                        <network>
+                                            <name>its</name>
+                                            <alias>localhost</alias>
+                                        </network>
+                                        <ports>
+                                            <port>${pass.doi.service.port}:8080</port>
+                                        </ports>
+                                    </run>
+                                </image>
+                                <!-- Fedora, Elastic Search, and the Indexer -->
+
+                                <image>
+                                    <!-- Fedora and ES must be exposed to the IT runtime, but the indexer is not -->
+                                    <alias>fcrepo</alias>
+                                    <name>${docker.fcrepo.version}</name>
+                                    <run>
+                                        <skip>${fcrepo.skip}</skip>
+                                        <wait>
+                                            <!-- Should use ${pass.fedora.baseurl}, but need to add authentication params to the URL -->
+                                            <url>
+                                                http://${pass.fedora.user}:${pass.fedora.password}@${fcrepo.server}:${fcrepo.http.port}/fcrepo/rest/
+                                            </url>
+                                            <time>180000</time>
+                                        </wait>
+                                        <ports>
+                                            <port>${fcrepo.http.port}:${fcrepo.http.port}</port>
+                                            <port>${fcrepo.jms.port}:${fcrepo.jms.port}</port>
+                                            <port>${fcrepo.stomp.port}:${fcrepo.stomp.port}</port>
+                                        </ports>
+                                        <env>
+                                            <FCREPO_HOME>/usr/local/tomcat/fcrepo4-data</FCREPO_HOME>
+                                            <FCREPO_HOST>fcrepo</FCREPO_HOST>
+                                            <FCREPO_PORT>${fcrepo.http.port}</FCREPO_PORT>
+                                            <FCREPO_JMS_PORT>${fcrepo.jms.port}</FCREPO_JMS_PORT>
+                                            <FCREPO_STOMP_PORT>${fcrepo.stomp.port}</FCREPO_STOMP_PORT>
+                                            <FCREPO_ACTIVEMQ_CONFIGURATION>classpath:/activemq-queue.xml</FCREPO_ACTIVEMQ_CONFIGURATION>
+                                            <FCREPO_JMS_BASEURL>${fcrepo.jms.baseurl}</FCREPO_JMS_BASEURL>
+                                        </env>
+                                        <network>
+                                            <name>its</name>
+                                            <alias>fcrepo</alias>
+                                            <alias>localhost</alias>
+                                        </network>
+                                    </run>
+                                </image>
+                                <image>
+                                    <alias>elasticsearch</alias>
+                                    <name>${docker.elasticsearch.version}</name>
+                                    <run>
+                                        <skip>${indexer.skip}</skip>
+                                        <wait>
+                                            <http>
+                                                <url>http://${pass.elasticsearch.host}:${es.port}/</url>
+                                            </http>
+                                            <time>120000</time>
+                                        </wait>
+                                        <ports>
+                                            <port>${es.port}:9200</port>
+                                        </ports>
+                                        <env>
+                                            <discovery.type>single-node</discovery.type>
+                                            <bootstrap.memory_lock>true</bootstrap.memory_lock>
+                                            <ES_JAVA_OPTS>-Xms512m -Xmx512m</ES_JAVA_OPTS>
+                                        </env>
+                                        <network>
+                                            <name>its</name>
+                                            <alias>elasticsearch</alias>
+                                        </network>
+                                    </run>
+                                </image>
+                                <image>
+                                    <alias>indexer</alias>
+                                    <name>${docker.indexer.version}</name>
+                                    <run>
+                                        <skip>${indexer.skip}</skip>
+                                        <env>
+                                            <PI_FEDORA_USER>${pass.fedora.user}</PI_FEDORA_USER>
+                                            <PI_FEDORA_PASS>${pass.fedora.password}</PI_FEDORA_PASS>
+                                            <PI_FEDORA_INTERNAL_BASE>http://fcrepo:${fcrepo.http.port}/fcrepo/rest/</PI_FEDORA_INTERNAL_BASE>
+                                            <PI_ES_BASE>http://elasticsearch:9200/</PI_ES_BASE>
+                                            <PI_ES_INDEX>http://elasticsearch:9200/pass/</PI_ES_INDEX>
+                                            <PI_FEDORA_JMS_BROKER>tcp://fcrepo:${fcrepo.jms.port}</PI_FEDORA_JMS_BROKER>
+                                            <PI_FEDORA_JMS_QUEUE>fedora</PI_FEDORA_JMS_QUEUE>
+                                            <PI_TYPE_PREFIX>http://oapass.org/ns/pass#</PI_TYPE_PREFIX>
+                                            <PI_LOG_LEVEL>DEBUG</PI_LOG_LEVEL>
+                                            <PI_ES_CONFIG>/app/esconfig-3.4.json</PI_ES_CONFIG>
+                                        </env>
+                                        <network>
+                                            <name>its</name>
+                                            <alias>indexer</alias>
+                                        </network>
+                                        <volumes>
+                                            <bind>
+                                                <volume>${project.build.testOutputDirectory}/esconfig:/app/esconfig</volume>
+                                            </bind>
+                                        </volumes>
+                                    </run>
+                                </image>
+                            </images>
+                        </configuration>
+                    </execution>
+                   <execution>
+                        <id>stop-after-its</id>
+                        <phase>post-integration-test</phase>
+                        <goals>
+                            <goal>stop</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                       <id>push-after-its</id>
+                       <phase>deploy</phase>
+                       <goals>
+                           <goal>push</goal>
+                       </goals>
+                       <configuration>
+                           <retries>5</retries>
+                       </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>${maven.failsafe.plugin.version}</version>
+                <configuration>
+                    <systemProperties>
+                        <pass.fedora.user>${pass.fedora.user}</pass.fedora.user>
+                        <pass.fedora.password>${pass.fedora.password}</pass.fedora.password>
+                        <pass.fedora.baseurl>${pass.fedora.baseurl}</pass.fedora.baseurl>
+                        <pass.elasticsearch.url>${pass.elasticsearch.url}</pass.elasticsearch.url>
+                        <pass.elasticsearch.limit>${pass.elasticsearch.limit}</pass.elasticsearch.limit>
+                        <fcrepo.host>${fcrepo.server}</fcrepo.host>
+                        <fcrepo.port>${fcrepo.http.port}</fcrepo.port>
+                        <fcrepo.jms.port>${fcrepo.jms.port}</fcrepo.jms.port>
+                        <pass.jsonld.context>${pass.jsonld.context}</pass.jsonld.context>
+                    </systemProperties>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+        </plugins>
+
+    </build>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.dataconservancy.pass</groupId>
+            <artifactId>pass-data-client</artifactId>
+            <version>${pass.java.client.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dataconservancy.pass</groupId>
+            <artifactId>pass-client-api</artifactId>
+            <version>${pass.java.client.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish</groupId>
+            <artifactId>javax.json</artifactId>
+            <version>${javax.json.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>${okhttp.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.json</groupId>
+            <artifactId>javax.json-api</artifactId>
+            <version>${javax.json.api.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+            <version>${javax.servlet.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>${logback-classic.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>${mockito.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>
