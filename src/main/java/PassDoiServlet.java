@@ -187,6 +187,7 @@ public class PassDoiServlet extends HttpServlet {
                     LOG.info("Returning result for DOI " + doi);
                 }
             } else {//journal id is null - this should never happen unless Crosssref journal is insufficient
+                //for example, if a book doi ws supplied which has no issns
                 response.setContentType("application/json");
                 response.setCharacterEncoding("utf-8");
 
@@ -270,32 +271,37 @@ public class PassDoiServlet extends HttpServlet {
         }
 
         Set<String> processedIssns = new HashSet<>();
-        for (int i=0; i < issnTypeArray.size(); i++) {
-            JsonObject issn = issnTypeArray.getJsonObject(i);
 
-            String type="";
+        if(issnTypeArray != null) {
+            for (int i = 0; i < issnTypeArray.size(); i++) {
+                JsonObject issn = issnTypeArray.getJsonObject(i);
 
-            //translate crossref issn-type strings to PASS issn-type strings
-            if (IssnType.PRINT.getCrossrefTypeString().equals(issn.getString(XREF_ISSN_TYPE))) {
-                type = IssnType.PRINT.getPassTypeString();
-            } else if (IssnType.ELECTRONIC.getCrossrefTypeString().equals(issn.getString(XREF_ISSN_TYPE))) {
-                type = IssnType.ELECTRONIC.getPassTypeString();
-            }
+                String type = "";
 
-            //collect the value for this issn
-            String value = issn.getString(XREF_ISSN_VALUE);
-            processedIssns.add(value);
+                //translate crossref issn-type strings to PASS issn-type strings
+                if (IssnType.PRINT.getCrossrefTypeString().equals(issn.getString(XREF_ISSN_TYPE))) {
+                    type = IssnType.PRINT.getPassTypeString();
+                } else if (IssnType.ELECTRONIC.getCrossrefTypeString().equals(issn.getString(XREF_ISSN_TYPE))) {
+                    type = IssnType.ELECTRONIC.getPassTypeString();
+                }
 
-            if (value.length() > 0) {
-                passJournal.getIssns().add(String.join(":", type, value));
-                LOG.debug("Adding typed ISSN to journal object: " + String.join(":", type, value));
+                //collect the value for this issn
+                String value = issn.getString(XREF_ISSN_VALUE);
+                processedIssns.add(value);
+
+                if (value.length() > 0) {
+                    passJournal.getIssns().add(String.join(":", type, value));
+                    LOG.debug("Adding typed ISSN to journal object: " + String.join(":", type, value));
+                }
             }
         }
 
-        for (int i=0; i < issnArray.size(); i++) {//if we have issns which were not given as typed, we add them without a type
-            String issn = issnArray.getString(i);
-            if (!processedIssns.contains(issn)) {
-                passJournal.getIssns().add(":" + issn);//do this to normalize type:value format
+        if(issnArray != null) {
+            for (int i = 0; i < issnArray.size(); i++) {//if we have issns which were not given as typed, we add them without a type
+                String issn = issnArray.getString(i);
+                if (!processedIssns.contains(issn)) {
+                    passJournal.getIssns().add(":" + issn);//do this to normalize type:value format
+                }
             }
         }
 
@@ -327,18 +333,13 @@ public class PassDoiServlet extends HttpServlet {
                 return null;
             }
         } else { //we have a journal, let's see if we can add anything new - just issns atm. we add only if not present
-            boolean update = false;
             passJournal = passClient.readResource(passJournalUri, Journal.class);
-            if (passJournal != null) {
 
+            if (passJournal != null) {
                 //check to see if we can supply issns
                 if (!passJournal.getIssns().containsAll(journal.getIssns())) {
                     List<String> newIssnList = Stream.concat(passJournal.getIssns().stream(), journal.getIssns().stream()).distinct().collect(Collectors.toList());
                     passJournal.setIssns(newIssnList);
-                    update = true;
-                }
-
-                if (update) {
                     passClient.updateResource(passJournal);
                 }
             } else {
