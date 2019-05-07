@@ -64,7 +64,7 @@ public class PassDoiServiceIT {
         Call call = client.newCall(okHttpRequest);
         try (Response okHttpResponse = call.execute()) {
             assertEquals(404, okHttpResponse.code());
-            assertEquals("{\"error\":\"The resource for this DOI could not be found on Crossref.\"}",
+            assertEquals("{\"error\":\"The resource for DOI 10.1234/w.xyz.ABC could not be found on Crossref.\"}",
                     okHttpResponse.body().string());
         }
     }

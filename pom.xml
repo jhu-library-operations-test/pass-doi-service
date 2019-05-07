@@ -62,7 +62,7 @@
         <logback-classic.version>1.2.3</logback-classic.version>
         <mockito.version>2.27.0</mockito.version>
         <okhttp.version>3.14.1</okhttp.version>
-        <pass.java.client.version>0.5.3</pass.java.client.version>
+        <pass.java.client.version>0.6.0</pass.java.client.version>
         <pass.model.version>3.1.1</pass.model.version>
         <slf4j.version>1.7.25</slf4j.version>
 
@@ -72,14 +72,17 @@
         <docker.elasticsearch.version>docker.elastic.co/elasticsearch/elasticsearch-oss:6.2.3</docker.elasticsearch.version>
 
         <!-- other integration test related properties -->
-        <pass.jsonld.context>https://oa-pass.github.io/pass-data-model/src/main/resources/context-3.2.jsonld</pass.jsonld.context>
+        <pass.jsonld.context>https://oa-pass.github.io/pass-data-model/src/main/resources/context-3.4.jsonld</pass.jsonld.context>
         <fcrepo.skip>false</fcrepo.skip>
         <indexer.skip>false</indexer.skip>
+        <!--suppress UnresolvedMavenProperty -->
         <fcrepo.server>${docker.host.address}</fcrepo.server>
         <pass.fedora.user>fedoraAdmin</pass.fedora.user>
         <pass.fedora.password>moo</pass.fedora.password>
+        <!--suppress UnresolvedMavenProperty -->
         <pass.fedora.baseurl>http://${docker.host.address}:${fcrepo.http.port}/fcrepo/rest/</pass.fedora.baseurl>
         <fcrepo.jms.baseurl>http://fcrepo:${fcrepo.http.port}/fcrepo/rest/</fcrepo.jms.baseurl>
+        <!--suppress UnresolvedMavenProperty -->
         <pass.elasticsearch.host>${docker.host.address}</pass.elasticsearch.host>
         <pass.elasticsearch.url>http://${pass.elasticsearch.host}:${es.port}/pass/</pass.elasticsearch.url>
         <pass.elasticsearch.limit>100</pass.elasticsearch.limit>
@@ -188,7 +191,7 @@
                                         <skip>false</skip>
                                         <network>
                                             <name>its</name>
-                                            <alias>localhost</alias>
+                                      <!--      <alias>localhost</alias> -->
                                         </network>
                                         <ports>
                                             <port>${pass.doi.service.port}:8080</port>
@@ -204,13 +207,15 @@
                                     <run>
                                         <skip>${fcrepo.skip}</skip>
                                         <wait>
-                                            <!-- Should use ${pass.fedora.baseurl}, but need to add authentication params to the URL -->
-                                            <url>
-                                                http://${pass.fedora.user}:${pass.fedora.password}@${fcrepo.server}:${fcrepo.http.port}/fcrepo/rest/
-                                            </url>
+                                           <http>
+                                                <!-- Should use ${pass.fedora.baseurl}, but need to add authentication params to the URL -->
+                                                <url>
+                                                    http://${pass.fedora.user}:${pass.fedora.password}@${fcrepo.server}:${fcrepo.http.port}/fcrepo/rest/
+                                                </url>
+                                            </http>
                                             <time>180000</time>
                                         </wait>
-                                        <ports>
+                                       <ports>
                                             <port>${fcrepo.http.port}:${fcrepo.http.port}</port>
                                             <port>${fcrepo.jms.port}:${fcrepo.jms.port}</port>
                                             <port>${fcrepo.stomp.port}:${fcrepo.stomp.port}</port>
@@ -227,7 +232,7 @@
                                         <network>
                                             <name>its</name>
                                             <alias>fcrepo</alias>
-                                            <alias>localhost</alias>
+                                       <!--     <alias>localhost</alias> -->
                                         </network>
                                     </run>
                                 </image>
