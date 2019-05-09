@@ -6,7 +6,7 @@
 
     <groupId>org.dataconservancy.pass</groupId>
     <artifactId>pass-doi-service</artifactId>
-    <version>0.0.2-SNAPSHOT</version>
+    <version>0.0.2</version>
 
     <packaging>war</packaging>
 
