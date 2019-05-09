@@ -14,7 +14,7 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
+package org.dataconservancy.pass.doi.service;
 
 import okhttp3.Call;
 import okhttp3.HttpUrl;
@@ -89,6 +89,8 @@ public class PassDoiServiceIT {
             jsonReader = Json.createReader(new StringReader(okHttpResponse.body().string()));
             JsonObject successReport = jsonReader.readObject();
             id = successReport.getString("journal-id");
+            //check translation from internal to external id
+            assertTrue(id.startsWith("https://pass.local/fcrepo/rest/"));
             crossref = successReport.getString("crossref");
             assertFalse(id.isEmpty());
             assertFalse(crossref.isEmpty());
@@ -109,6 +111,22 @@ public class PassDoiServiceIT {
             JsonObject successReport = jsonReader.readObject();
             assertEquals(id, successReport.getString("journal-id"));
             assertEquals(crossref, successReport.getString("crossref"));
+        }
+    }
+
+    @Test
+    public void bookDoiFailTest() throws Exception {//books have isbn, not issn - this should cause a failure
+        String bookDoiChapter = "10.1002/0470841559.ch1";
+        HttpUrl.Builder urlBuilder = HttpUrl.parse(doiServiceUrl).newBuilder().addQueryParameter("doi", bookDoiChapter);
+        String url = urlBuilder.build().toString();
+        Request okHttpRequest = new Request.Builder()
+                .url(url)
+                .build();
+        Call call = client.newCall(okHttpRequest);
+        try (Response okHttpResponse = call.execute()) {
+            assertEquals(422, okHttpResponse.code());
+            assertEquals("{\"error\":\"Insufficient information to locate or specify a journal entry.\"}",
+                    okHttpResponse.body().string());
         }
     }
 

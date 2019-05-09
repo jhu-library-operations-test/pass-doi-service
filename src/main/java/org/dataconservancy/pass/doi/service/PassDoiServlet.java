@@ -14,6 +14,7 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
+package org.dataconservancy.pass.doi.service;
 
 import okhttp3.Call;
 import okhttp3.HttpUrl;
@@ -73,7 +74,10 @@ public class PassDoiServlet extends HttpServlet {
     private String BASE_URL = "https://api.crossref.org/";
     private String VERSION = "v1/";
     private String BASIC_PREFIX = "works/";
+    //some defaults
     private String MAILTO = "pass@jhu.edu";
+    private String FEDORA_INTERNAL = "http://fcrepo:8080/fcrepo/rest/";
+    private String FEDORA_EXTERNAL = "https://pass.local/fcrepo/rest/";
 
     private Set<String> activeJobs = new HashSet<>();
 
@@ -165,11 +169,19 @@ public class PassDoiServlet extends HttpServlet {
                 LOG.info(message);
             }
         } else {//have a non-empty string to process
+            LOG.debug("Building pass journal");
             //we probably have something JSONy at this point. Let's build a journal object from it
             Journal journal = buildPassJournal(xrefJsonString);
-
+            LOG.debug("Comparing journal object with possible PASS version");
             //and compare it with what we already have in PASS, updating PASS if necessary
-            String journalId = updateJournalInPass(journal).getId().toString();
+
+            Journal updatedJournal = updateJournalInPass(journal);
+
+            String journalId = null;
+
+            if (updatedJournal != null) {
+                journalId = updatedJournal.getId().toString();
+            }
 
             if (journalId != null) {
                 response.setContentType("application/json");
@@ -300,7 +312,7 @@ public class PassDoiServlet extends HttpServlet {
             for (int i = 0; i < issnArray.size(); i++) {//if we have issns which were not given as typed, we add them without a type
                 String issn = issnArray.getString(i);
                 if (!processedIssns.contains(issn)) {
-                    passJournal.getIssns().add(":" + issn);//do this to normalize type:value format
+                    passJournal.getIssns().add(":" + issn);//do this to conform with type:value format
                 }
             }
         }
@@ -315,11 +327,13 @@ public class PassDoiServlet extends HttpServlet {
      * object possible from the two sources - PASS objects are more authoritative. Use the
      * Crossref version if we don't have it already in PASS. Store the resulting object in PASS.
      * @param journal - the Journal object generated from Crossref metadata
-     * @return the updated Journal object, stored in PASS if the PASS object needs updating; null if we don't have
+     * @return the updated Journal object stored in PASS if the PASS object needs updating; null if we don't have
      * enough info to create a journal
      */
     Journal updateJournalInPass(Journal journal) {
+        LOG.debug("GETTING ISSNS");
         List<String> issns = journal.getIssns();
+        LOG.debug("GETTING NAME");
         String name = journal.getJournalName();
 
         Journal passJournal;
@@ -330,6 +344,7 @@ public class PassDoiServlet extends HttpServlet {
             if(name != null && !name.isEmpty() && issns.size()>0) {//we have enough info to make a journal entry
                 passJournal = passClient.createAndReadResource(journal, Journal.class);
             } else {//do not have enough to create a new journal
+                LOG.debug("Not enough info for journal " + name);
                 return null;
             }
         } else { //we have a journal, let's see if we can add anything new - just issns atm. we add only if not present
@@ -342,13 +357,25 @@ public class PassDoiServlet extends HttpServlet {
                     passJournal.setIssns(newIssnList);
                     passClient.updateResource(passJournal);
                 }
+
             } else {
-                String uhoh = "Journal URI " + passJournalUri + " was found, but the object could not be retrieved. This should never happen.";
+                String uhoh = "Journal URI " + passJournalUri.toString() + " was found, but the object could not be retrieved. This should never happen.";
                 LOG.error(uhoh);
                 throw new RuntimeException(uhoh);
             }
 
         }
+        //externalize the internal journal id
+        String internalPrefix = System.getenv("PASS_FEDORA_BASEURL") != null ? System.getenv("PASS_FEDORA_BASEURL") : FEDORA_INTERNAL;
+        String externalPrefix = System.getenv("PASS_EXTERNAL_FEDORA_BASEURL") != null ? System.getenv("PASS_EXTERNAL_FEDORA_BASEURL") : FEDORA_EXTERNAL;
+        LOG.debug("Internal prefix: " + internalPrefix);
+        LOG.debug("External prefix: " + externalPrefix);
+        String internalUriString = passJournal.getId().toString();
+        if (internalUriString.startsWith(internalPrefix)) {
+            passJournal.setId(URI.create(internalUriString.replace(internalPrefix, externalPrefix)));
+        }
+        LOG.debug("passJournal URI: " + passJournal.getId().toString());
+        LOG.debug("Returning journal object: " + passJournal.toString());
         return passJournal;
     }
 

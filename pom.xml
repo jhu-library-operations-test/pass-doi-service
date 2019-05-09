@@ -309,7 +309,7 @@
                            <retries>5</retries>
                        </configuration>
                     </execution>
-                </executions>
+              </executions>
             </plugin>
 
             <plugin>
