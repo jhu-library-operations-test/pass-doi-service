@@ -368,6 +368,8 @@ public class PassDoiServlet extends HttpServlet {
         //externalize the internal journal id
         String internalPrefix = System.getenv("PASS_FEDORA_BASEURL") != null ? System.getenv("PASS_FEDORA_BASEURL") : FEDORA_INTERNAL;
         String externalPrefix = System.getenv("PASS_EXTERNAL_FEDORA_BASEURL") != null ? System.getenv("PASS_EXTERNAL_FEDORA_BASEURL") : FEDORA_EXTERNAL;
+        internalPrefix = internalPrefix + (internalPrefix.endsWith("/")?"":"/");
+        externalPrefix = externalPrefix + (externalPrefix.endsWith("/")?"":"/");
         LOG.debug("Internal prefix: " + internalPrefix);
         LOG.debug("External prefix: " + externalPrefix);
         String internalUriString = passJournal.getId().toString();
