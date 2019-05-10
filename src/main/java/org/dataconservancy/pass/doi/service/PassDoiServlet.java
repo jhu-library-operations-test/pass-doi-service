@@ -33,13 +33,13 @@ import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonReader;
+import javax.json.stream.JsonParsingException;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringReader;
@@ -111,26 +111,24 @@ public class PassDoiServlet extends HttpServlet {
         //stage 1: verify doi is valid
         if (verify(doi) == null) {//do not have have a valid xref doi
             try (OutputStream out = response.getOutputStream()) {
-                String jsonString = Json.createObjectBuilder()
+                JsonObject jsonObject = Json.createObjectBuilder()
                         .add("error", "Supplied DOI is not in valid Crossref format.")
-                        .build()
-                        .toString();
-                out.write(jsonString.getBytes());
+                        .build();
+                out.write(jsonObject.toString().getBytes());
                 response.setStatus(400);
                 return;
             }
         }
 
-        //stage 2: check cache map for existence of id
-        //put doi on map if absent. add id value when we get it
+        //stage 2: check cache map for existence of doi
+        //put doi on map if absent
         if (activeJobs.contains(doi)) {
             try (OutputStream out = response.getOutputStream()) {
                 String message = "There is already an active request for " + doi;
-                String jsonString = Json.createObjectBuilder()
+                JsonObject jsonObject = Json.createObjectBuilder()
                         .add("error", message + "; try again later.")
-                        .build()
-                        .toString();
-                out.write(jsonString.getBytes());
+                        .build();
+                out.write(jsonObject.toString().getBytes());
                 response.setStatus(429);
                 LOG.info(message);
                 return;
@@ -143,35 +141,41 @@ public class PassDoiServlet extends HttpServlet {
             t.start();
         }
 
-
         //stage 3: try to get crossref record, catch errors first, and halt processing
-        String xrefJsonString = retrieveXrefMetdata(doi);
-        if (xrefJsonString == null) {
+        JsonObject xrefJsonObject = retrieveXrefMetdata(doi);
+        if (xrefJsonObject == null) {
             try (OutputStream out = response.getOutputStream()) {
                 String message = "There was an error getting the metadata from Crossref for " + doi;
-                String jsonString = Json.createObjectBuilder()
+                JsonObject jsonObject = Json.createObjectBuilder()
                         .add("error", message)
-                        .build()
-                        .toString();
-                out.write(jsonString.getBytes());
+                        .build();
+                out.write(jsonObject.toString().getBytes());
                 response.setStatus(500);
                 LOG.info(message);
             }
-        } else if (xrefJsonString.equals("Resource not found.")) {
+        } else if (xrefJsonObject.getJsonString("error") != null)  {
+                int responseCode;
+                String message;
+                if (xrefJsonObject.getString("error").equals("Resource not found.")) {
+                    responseCode = 404;
+                    message = "The resource for DOI " + doi + " could not be found on Crossref.";
+                } else {
+                    responseCode = 500;
+                    message = "A record for this resource could not be found on Crossref: " +
+                            xrefJsonObject.getJsonString("error");
+                }
             try (OutputStream out = response.getOutputStream()) {
-                String message = "The resource for DOI " + doi + " could not be found on Crossref.";
-                String jsonString = Json.createObjectBuilder()
+                JsonObject jsonObject = Json.createObjectBuilder()
                         .add("error", message)
-                        .build()
-                        .toString();
-                out.write(jsonString.getBytes());
-                response.setStatus(404);
+                        .build();
+                out.write(jsonObject.toString().getBytes());
+                response.setStatus(responseCode);
                 LOG.info(message);
             }
         } else {//have a non-empty string to process
             LOG.debug("Building pass journal");
             //we probably have something JSONy at this point. Let's build a journal object from it
-            Journal journal = buildPassJournal(xrefJsonString);
+            Journal journal = buildPassJournal(xrefJsonObject);
             LOG.debug("Comparing journal object with possible PASS version");
             //and compare it with what we already have in PASS, updating PASS if necessary
 
@@ -184,41 +188,34 @@ public class PassDoiServlet extends HttpServlet {
             }
 
             if (journalId != null) {
-                response.setContentType("application/json");
-                response.setCharacterEncoding("utf-8");
 
                 try (OutputStream out = response.getOutputStream()) {
-                    String jsonString = Json.createObjectBuilder()
+                    JsonObject jsonObject = Json.createObjectBuilder()
                             .add("journal-id", journalId)
-                            .add("crossref", xrefJsonString)
-                            .build()
-                            .toString();
+                            .add("crossref", xrefJsonObject)
+                            .build();
 
-                    out.write(jsonString.getBytes());
+                    out.write(jsonObject.toString().getBytes());
                     response.setStatus(200);
                     LOG.info("Returning result for DOI " + doi);
                 }
             } else {//journal id is null - this should never happen unless Crosssref journal is insufficient
                 //for example, if a book doi ws supplied which has no issns
-                response.setContentType("application/json");
-                response.setCharacterEncoding("utf-8");
 
                 try (OutputStream out = response.getOutputStream()) {
                     String message = "Insufficient information to locate or specify a journal entry.";
-                    String jsonString = Json.createObjectBuilder()
+                    JsonObject jsonObject = Json.createObjectBuilder()
                             .add("error", message)
-                            .build()
-                            .toString();
-                    out.write(jsonString.getBytes());
+                            .build();
+
+                    out.write(jsonObject.toString().getBytes());
                     response.setStatus(422);
                     LOG.info(message);
                 }
             }
         }
         activeJobs.remove(doi);
-
     }
-
 
 
     /**
@@ -226,8 +223,8 @@ public class PassDoiServlet extends HttpServlet {
      * @param doi - the supplied doi string, prefix trimmed if necessary
      * @return a string representing the works object if successful; an empty string if not found; null if IO exception
      */
-    String retrieveXrefMetdata(String doi) {
-        String agent = System.getenv("PASS_DOI_SERVICE_MAILTO") != null ? System.getenv("PASS_DOI_SERVICE_MAILTO")  : MAILTO;
+    JsonObject retrieveXrefMetdata(String doi) {
+        String agent = System.getenv("PASS_DOI_SERVICE_MAILTO") != null ? System.getenv("PASS_DOI_SERVICE_MAILTO") : MAILTO;
 
         HttpUrl.Builder urlBuilder = HttpUrl.parse(BASE_URL + VERSION + BASIC_PREFIX + doi).newBuilder();
         String url = urlBuilder.build().toString();
@@ -236,29 +233,38 @@ public class PassDoiServlet extends HttpServlet {
                 .addHeader("User-Agent", agent)
                 .build();
         Call call = client.newCall(okHttpRequest);
-        StringBuilder stringBuilder = new StringBuilder();
+        JsonReader reader;
+        JsonObject xrefJsonObject;
+        String responseString = null;
+
         try (Response okHttpResponse = call.execute()) {
-            String line;
-            BufferedReader reader = new BufferedReader(okHttpResponse.body().charStream());
-            while ((line = reader.readLine()) != null) {
-                stringBuilder.append(line);
+            responseString = okHttpResponse.body().string();
+            reader = Json.createReader(new StringReader(responseString));
+            xrefJsonObject = reader.readObject();
+            reader.close();
+            return xrefJsonObject;
+        } catch (JsonParsingException e) {
+            if (responseString != null) {
+                return Json.createObjectBuilder()
+                        .add("error", responseString)
+                        .build();
             }
-        } catch (Exception e) {
+        } catch (IOException e) {
             return null;
         }
-        return stringBuilder.toString();
+        return null;
     }
 
     /**
      * Takes JSON which represents journal article metadata from Crossref
      * and populates a new Journal object. Currently we take typed issns and the journal
      * name.
-     * @param jsonInput - the JSON metadata from Crossref
+     * @param metadata - the JSON metadata from Crossref
      * @return the PASS journal object
      */
-    Journal buildPassJournal(String jsonInput) {
+    Journal buildPassJournal(JsonObject metadata) {
 
-        LOG.debug("JSON input (from Crossref): " + jsonInput);
+        LOG.debug("JSON input (from Crossref): " + metadata.toString());
 
         final String XREF_MESSAGE = "message";
         final String XREF_TITLE = "container-title";
@@ -267,13 +273,9 @@ public class PassDoiServlet extends HttpServlet {
         final String XREF_ISSN_TYPE = "type";
         final String XREF_ISSN_VALUE = "value";
 
-
         Journal  passJournal = new Journal();
 
-        JsonReader jsonReader;
-        jsonReader = Json.createReader(new StringReader(jsonInput));
-        JsonObject crossrefMetadata = jsonReader.readObject();
-        JsonObject messageObject = crossrefMetadata.getJsonObject(XREF_MESSAGE);
+        JsonObject messageObject = metadata.getJsonObject(XREF_MESSAGE);
         JsonArray containerTitleArray = messageObject.getJsonArray(XREF_TITLE);
         JsonArray issnTypeArray = messageObject.getJsonArray(XREF_ISSN_TYPE_ARRAY);
         JsonArray issnArray = messageObject.getJsonArray(XREF_ISSN_ARRAY);
@@ -479,6 +481,9 @@ public class PassDoiServlet extends HttpServlet {
 
     }
 
+    /**
+     * a convenienc enum for translating type strings for issns
+     */
     public enum IssnType {
         PRINT,
         ELECTRONIC;

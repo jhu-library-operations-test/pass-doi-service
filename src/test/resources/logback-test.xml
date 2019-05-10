@@ -38,7 +38,7 @@
         <appender-ref ref="STDERR"/>
     </logger>
     <logger name="org.dataconservancy.pass.doi.service.PassDoiServlet" additivity="false"
-            level="${org.dataconservancy.pass.doi.service.PassDoiServlet.level:-DEBUG}">
+            level="${org.dataconservancy.pass.doi.service.PassDoiServlet.level:-WARN}">
         <appender-ref ref="STDERR"/>
     </logger>
     <!-- org.dataconservancy.pass.client.elasticsearch.ElasticsearchPassClient -->

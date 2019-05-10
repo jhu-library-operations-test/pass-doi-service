@@ -6,7 +6,7 @@
 
     <groupId>org.dataconservancy.pass</groupId>
     <artifactId>pass-doi-service</artifactId>
-    <version>0.0.2</version>
+    <version>1.0.0</version>
 
     <packaging>war</packaging>
 
@@ -298,16 +298,6 @@
                         <goals>
                             <goal>stop</goal>
                         </goals>
-                    </execution>
-                    <execution>
-                       <id>push-after-its</id>
-                       <phase>deploy</phase>
-                       <goals>
-                           <goal>push</goal>
-                       </goals>
-                       <configuration>
-                           <retries>5</retries>
-                       </configuration>
                     </execution>
               </executions>
             </plugin>

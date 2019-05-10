@@ -33,12 +33,21 @@ import java.io.StringReader;
 import static java.lang.Thread.sleep;
 import static org.junit.Assert.*;
 
+/**
+ * Integration Test Class for the doi service
+ *
+ * @author jrm
+ */
 public class PassDoiServiceIT {
 
     private static final String doiServiceUrl = "http://localhost:8080/pass-doi-service/journal";
 
     OkHttpClient client = new OkHttpClient();
 
+    /**
+     * throw in a "moo" doi, expect a 400 error
+     * @throws Exception if something goes wrong
+     */
     @Test
     public void smokeTest() throws Exception {
         HttpUrl.Builder urlBuilder = HttpUrl.parse(doiServiceUrl).newBuilder().addQueryParameter("doi", "moo");
@@ -54,6 +63,10 @@ public class PassDoiServiceIT {
         }
     }
 
+    /**
+     * test that a doi not corresponding to an actual crossref journal record is flagged
+     * @throws Exception if something goes wrong
+     */
     @Test
     public void noSuchXrefObjectTest() throws Exception {
         HttpUrl.Builder urlBuilder = HttpUrl.parse(doiServiceUrl).newBuilder().addQueryParameter("doi", "10.1234/w.xyz.ABC");
@@ -69,12 +82,18 @@ public class PassDoiServiceIT {
         }
     }
 
+    /**
+     * test that an existing record on crossref is found, and a journal object is created for it
+     * also show that requesting it again finds the existing PASS journal object, and that the crossref JSON objects are
+     * the same
+     * @throws Exception if something goes wrong
+     */
     @Test
     public void normalBehaviorTest() throws Exception {
 
         String realDoi = "10.4137/cmc.s38446";
         String id = "";
-        String crossref = "";
+        JsonObject crossref = null;
 
         HttpUrl.Builder urlBuilder = HttpUrl.parse(doiServiceUrl).newBuilder().addQueryParameter("doi", realDoi);
         String url = urlBuilder.build().toString();
@@ -91,7 +110,7 @@ public class PassDoiServiceIT {
             id = successReport.getString("journal-id");
             //check translation from internal to external id
             assertTrue(id.startsWith("https://pass.local/fcrepo/rest/"));
-            crossref = successReport.getString("crossref");
+            crossref = successReport.getJsonObject("crossref");
             assertFalse(id.isEmpty());
             assertFalse(crossref.isEmpty());
         }
@@ -110,10 +129,15 @@ public class PassDoiServiceIT {
             jsonReader = Json.createReader(new StringReader(okHttpResponse.body().string()));
             JsonObject successReport = jsonReader.readObject();
             assertEquals(id, successReport.getString("journal-id"));
-            assertEquals(crossref, successReport.getString("crossref"));
+            assertEquals(crossref, successReport.getJsonObject("crossref"));
         }
     }
 
+    /**
+     * test that a valid dois for a book gives the appropriate error - since it has no issns, it does not have sufficient
+     * info to specify a journal
+     * @throws Exception if something goes wrong
+     */
     @Test
     public void bookDoiFailTest() throws Exception {//books have isbn, not issn - this should cause a failure
         String bookDoiChapter = "10.1002/0470841559.ch1";
