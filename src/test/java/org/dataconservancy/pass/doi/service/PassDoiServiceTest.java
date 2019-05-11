@@ -14,6 +14,8 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
+package org.dataconservancy.pass.doi.service;
+
 import org.dataconservancy.pass.client.PassClient;
 import org.dataconservancy.pass.client.PassJsonAdapter;
 import org.dataconservancy.pass.client.adapter.PassJsonAdapterBasic;
@@ -24,6 +26,10 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
+import javax.json.Json;
+import javax.json.JsonObject;
+import javax.json.JsonReader;
+import java.io.StringReader;
 import java.net.URI;
 import java.util.*;
 
@@ -32,6 +38,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
+/**
+ * Unit tests for the doi service
+ */
 @RunWith(MockitoJUnitRunner.class)
 public class PassDoiServiceTest {
 
@@ -125,6 +134,10 @@ public class PassDoiServiceTest {
             "\"http:\\/\\/dx.doi.org\\/10.4137\\/cmc.s38446\",\"relation\":{},\"ISSN\":[\"1179-5468\",\"1179-5468\", \"1234-5678\"],\"issn-type\":[{\"value\":" +
             "\"1179-5468\",\"type\":\"print\"},{\"value\":\"1179-5468\",\"type\":\"electronic\"}]}}";
 
+    /**
+     * set up stuff, including a lot of mocks
+     * @throws Exception if something goes wrong
+     */
     @Before
     public void setUp() throws Exception {
 
@@ -187,7 +200,10 @@ public class PassDoiServiceTest {
      */
     @Test
     public void buildPassJournalTest() {
-        Journal passJournal = underTest.buildPassJournal(xrefJson);
+        JsonReader reader = Json.createReader(new StringReader(xrefJson));
+        JsonObject object = reader.readObject();
+        reader.close();
+        Journal passJournal = underTest.buildPassJournal(object);
 
         assertEquals("Clinical Medicine Insights: Cardiology", passJournal.getJournalName());
         assertEquals(2, passJournal.getIssns().size());
@@ -202,7 +218,10 @@ public class PassDoiServiceTest {
      */
     @Test
     public void buildPassJournalExtraIssnTest() {
-        Journal passJournal = underTest.buildPassJournal(xrefJsonExtraIssn);
+        JsonReader reader = Json.createReader(new StringReader(xrefJsonExtraIssn));
+        JsonObject object = reader.readObject();
+        reader.close();
+        Journal passJournal = underTest.buildPassJournal(object);
 
         assertEquals("Clinical Medicine Insights: Cardiology", passJournal.getJournalName());
         assertEquals(3, passJournal.getIssns().size());
@@ -311,10 +330,25 @@ public class PassDoiServiceTest {
     @Test
     public void testXrefLookup() {
         String realDoi = "10.4137/cmc.s38446";
-        String blob = underTest.retrieveXrefMetdata(realDoi);
+        JsonObject blob = underTest.retrieveXrefMetdata(realDoi);
         //these results will differ by a timestamp - but a good check is that they return the same journal objects
-        assertNotNull(underTest.buildPassJournal(xrefJson));
-        assertEquals(underTest.buildPassJournal(xrefJson), underTest.buildPassJournal(blob));
+        JsonReader reader = Json.createReader(new StringReader(xrefJson));
+        JsonObject object = reader.readObject();
+        reader.close();
+
+        assertNotNull(blob.getJsonObject("message").getJsonArray("ISSN"));
+        assertEquals(blob.getJsonObject("message").getJsonArray("ISSN"), object.getJsonObject("message").getJsonArray("ISSN"));
+
+    }
+
+    /**
+     * test that a bad doi gives the required error message
+     */
+    @Test
+    public void testBadDoiLookup() {
+        String badDoi = "10.1212/abc.DEF";
+        JsonObject blob = underTest.retrieveXrefMetdata(badDoi);
+        assertEquals("Resource not found.", blob.getString("error"));
     }
 
     /**
