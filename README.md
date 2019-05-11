@@ -19,7 +19,7 @@ and a `crossref` object representing the data returned to the service as a resul
 ## Configuration
 The service will look for an environment variable called PASS_DOI_SERVICE_MAILTO to 
 specify a value on the User-Agent header on the Crossref request. If not present, the default is 
-`pass@jhu.edu`. In addition, the service will require the following environment variables for the java client
+`pass@jhu.edu`. The service will require the following environment variables for the java client
 for Fedora if the defaults are not to be used:
 
 ```
@@ -28,4 +28,9 @@ PASS_FEDORA_PASSWORD
 PASS_FEDORA_BASEURL
 PASS_ELASTICSEARCH_URL
 PASS_ELASTICSEARCH_LIMIT
+```
+In addition these environment variables need to be present to translate internal Journal ids to the external form presented to clients:
+```
+PASS_FEDORA_BASEURL
+PASS_EXTERNAL_FEDORA_BASEURL
 ```
