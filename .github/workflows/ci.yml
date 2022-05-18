@@ -12,6 +12,6 @@ jobs:
       - run: echo "This is a CI build of branch ${{ github.ref }} in repository ${{ github.repository }}"
       - run: echo "This job was triggered by a ${{ github.event_name }} event and is running on a ${{ runner.os }} server"
 
-  call-test-maven-jar:
+  call-test-maven:
     name: Run Automated Tests
     uses: eclipse-pass/pass-doi-service/.github/workflows/maven-test.yml@main
