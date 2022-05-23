@@ -16,30 +16,9 @@
  */
 package org.dataconservancy.pass.doi.service;
 
-import okhttp3.Call;
-import okhttp3.HttpUrl;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
-import org.dataconservancy.pass.client.PassClient;
-import org.dataconservancy.pass.client.PassClientFactory;
-import org.dataconservancy.pass.client.PassJsonAdapter;
-import org.dataconservancy.pass.client.adapter.PassJsonAdapterBasic;
-import org.dataconservancy.pass.model.Journal;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static java.lang.Thread.sleep;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
-import javax.json.Json;
-import javax.json.JsonArray;
-import javax.json.JsonObject;
-import javax.json.JsonReader;
-import javax.json.stream.JsonParsingException;
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletException;
-import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringReader;
@@ -55,9 +34,30 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.json.Json;
+import javax.json.JsonArray;
+import javax.json.JsonObject;
+import javax.json.JsonReader;
+import javax.json.stream.JsonParsingException;
+import javax.servlet.ServletConfig;
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
-import static java.lang.Thread.sleep;
-import static java.util.concurrent.TimeUnit.SECONDS;
+import okhttp3.Call;
+import okhttp3.HttpUrl;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+import org.dataconservancy.pass.client.PassClient;
+import org.dataconservancy.pass.client.PassClientFactory;
+import org.dataconservancy.pass.client.PassJsonAdapter;
+import org.dataconservancy.pass.client.adapter.PassJsonAdapterBasic;
+import org.dataconservancy.pass.model.Journal;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @WebServlet(urlPatterns = "/journal")
 public class PassDoiServlet extends HttpServlet {
@@ -82,7 +82,6 @@ public class PassDoiServlet extends HttpServlet {
     private Set<String> activeJobs = new HashSet<>();
 
 
-
     @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
@@ -93,10 +92,9 @@ public class PassDoiServlet extends HttpServlet {
         client = builder.build();
     }
 
-
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws IOException {
+        throws IOException {
 
         response.setContentType("application/json");
         response.setCharacterEncoding("utf-8");
@@ -106,14 +104,14 @@ public class PassDoiServlet extends HttpServlet {
 
         //we will call out to crossref and collect the work JSON object
         //the value of this parameter is expected to be already URIencoded
-        String doi= request.getParameter("doi");
+        String doi = request.getParameter("doi");
 
         //stage 1: verify doi is valid
         if (verify(doi) == null) {//do not have have a valid xref doi
             try (OutputStream out = response.getOutputStream()) {
                 JsonObject jsonObject = Json.createObjectBuilder()
-                        .add("error", "Supplied DOI is not in valid Crossref format.")
-                        .build();
+                                            .add("error", "Supplied DOI is not in valid Crossref format.")
+                                            .build();
                 out.write(jsonObject.toString().getBytes());
                 response.setStatus(400);
                 return;
@@ -126,15 +124,15 @@ public class PassDoiServlet extends HttpServlet {
             try (OutputStream out = response.getOutputStream()) {
                 String message = "There is already an active request for " + doi;
                 JsonObject jsonObject = Json.createObjectBuilder()
-                        .add("error", message + "; try again later.")
-                        .build();
+                                            .add("error", message + "; try again later.")
+                                            .build();
                 out.write(jsonObject.toString().getBytes());
                 response.setStatus(429);
                 LOG.info(message);
                 return;
             }
 
-        } else  {//this DOI is not actively being processed
+        } else {//this DOI is not actively being processed
             //let's temporarily prohibit new requests for this DOI
             activeJobs.add(doi);
             Thread t = new Thread(new ExpiringLock(doi, cachePeriod));
@@ -147,27 +145,27 @@ public class PassDoiServlet extends HttpServlet {
             try (OutputStream out = response.getOutputStream()) {
                 String message = "There was an error getting the metadata from Crossref for " + doi;
                 JsonObject jsonObject = Json.createObjectBuilder()
-                        .add("error", message)
-                        .build();
+                                            .add("error", message)
+                                            .build();
                 out.write(jsonObject.toString().getBytes());
                 response.setStatus(500);
                 LOG.info(message);
             }
-        } else if (xrefJsonObject.getJsonString("error") != null)  {
-                int responseCode;
-                String message;
-                if (xrefJsonObject.getString("error").equals("Resource not found.")) {
-                    responseCode = 404;
-                    message = "The resource for DOI " + doi + " could not be found on Crossref.";
-                } else {
-                    responseCode = 500;
-                    message = "A record for this resource could not be found on Crossref: " +
-                            xrefJsonObject.getJsonString("error");
-                }
+        } else if (xrefJsonObject.getJsonString("error") != null) {
+            int responseCode;
+            String message;
+            if (xrefJsonObject.getString("error").equals("Resource not found.")) {
+                responseCode = 404;
+                message = "The resource for DOI " + doi + " could not be found on Crossref.";
+            } else {
+                responseCode = 500;
+                message = "A record for this resource could not be found on Crossref: " +
+                          xrefJsonObject.getJsonString("error");
+            }
             try (OutputStream out = response.getOutputStream()) {
                 JsonObject jsonObject = Json.createObjectBuilder()
-                        .add("error", message)
-                        .build();
+                                            .add("error", message)
+                                            .build();
                 out.write(jsonObject.toString().getBytes());
                 response.setStatus(responseCode);
                 LOG.info(message);
@@ -191,9 +189,9 @@ public class PassDoiServlet extends HttpServlet {
 
                 try (OutputStream out = response.getOutputStream()) {
                     JsonObject jsonObject = Json.createObjectBuilder()
-                            .add("journal-id", journalId)
-                            .add("crossref", xrefJsonObject)
-                            .build();
+                                                .add("journal-id", journalId)
+                                                .add("crossref", xrefJsonObject)
+                                                .build();
 
                     out.write(jsonObject.toString().getBytes());
                     response.setStatus(200);
@@ -205,8 +203,8 @@ public class PassDoiServlet extends HttpServlet {
                 try (OutputStream out = response.getOutputStream()) {
                     String message = "Insufficient information to locate or specify a journal entry.";
                     JsonObject jsonObject = Json.createObjectBuilder()
-                            .add("error", message)
-                            .build();
+                                                .add("error", message)
+                                                .build();
 
                     out.write(jsonObject.toString().getBytes());
                     response.setStatus(422);
@@ -217,21 +215,22 @@ public class PassDoiServlet extends HttpServlet {
         activeJobs.remove(doi);
     }
 
-
     /**
      * consult crossref to get a works object for a supplied doi
+     *
      * @param doi - the supplied doi string, prefix trimmed if necessary
      * @return a string representing the works object if successful; an empty string if not found; null if IO exception
      */
     JsonObject retrieveXrefMetdata(String doi) {
-        String agent = System.getenv("PASS_DOI_SERVICE_MAILTO") != null ? System.getenv("PASS_DOI_SERVICE_MAILTO") : MAILTO;
+        String agent = System.getenv("PASS_DOI_SERVICE_MAILTO") != null ? System.getenv(
+            "PASS_DOI_SERVICE_MAILTO") : MAILTO;
 
         HttpUrl.Builder urlBuilder = HttpUrl.parse(BASE_URL + VERSION + BASIC_PREFIX + doi).newBuilder();
         String url = urlBuilder.build().toString();
         Request okHttpRequest = new Request.Builder()
-                .url(url)
-                .addHeader("User-Agent", agent)
-                .build();
+            .url(url)
+            .addHeader("User-Agent", agent)
+            .build();
         Call call = client.newCall(okHttpRequest);
         JsonReader reader;
         JsonObject xrefJsonObject;
@@ -246,8 +245,8 @@ public class PassDoiServlet extends HttpServlet {
         } catch (JsonParsingException e) {
             if (responseString != null) {
                 return Json.createObjectBuilder()
-                        .add("error", responseString)
-                        .build();
+                           .add("error", responseString)
+                           .build();
             }
         } catch (IOException e) {
             return null;
@@ -259,6 +258,7 @@ public class PassDoiServlet extends HttpServlet {
      * Takes JSON which represents journal article metadata from Crossref
      * and populates a new Journal object. Currently we take typed issns and the journal
      * name.
+     *
      * @param metadata - the JSON metadata from Crossref
      * @return the PASS journal object
      */
@@ -273,7 +273,7 @@ public class PassDoiServlet extends HttpServlet {
         final String XREF_ISSN_TYPE = "type";
         final String XREF_ISSN_VALUE = "value";
 
-        Journal  passJournal = new Journal();
+        Journal passJournal = new Journal();
 
         JsonObject messageObject = metadata.getJsonObject(XREF_MESSAGE);
         JsonArray containerTitleArray = messageObject.getJsonArray(XREF_TITLE);
@@ -286,7 +286,7 @@ public class PassDoiServlet extends HttpServlet {
 
         Set<String> processedIssns = new HashSet<>();
 
-        if(issnTypeArray != null) {
+        if (issnTypeArray != null) {
             for (int i = 0; i < issnTypeArray.size(); i++) {
                 JsonObject issn = issnTypeArray.getJsonObject(i);
 
@@ -310,8 +310,9 @@ public class PassDoiServlet extends HttpServlet {
             }
         }
 
-        if(issnArray != null) {
-            for (int i = 0; i < issnArray.size(); i++) {//if we have issns which were not given as typed, we add them without a type
+        if (issnArray != null) {
+            for (int i = 0; i < issnArray.size();
+                 i++) {//if we have issns which were not given as typed, we add them without a type
                 String issn = issnArray.getString(i);
                 if (!processedIssns.contains(issn)) {
                     passJournal.getIssns().add(":" + issn);//do this to conform with type:value format
@@ -328,6 +329,7 @@ public class PassDoiServlet extends HttpServlet {
      * version of this object which we have in PASS. Construct the most complete Journal
      * object possible from the two sources - PASS objects are more authoritative. Use the
      * Crossref version if we don't have it already in PASS. Store the resulting object in PASS.
+     *
      * @param journal - the Journal object generated from Crossref metadata
      * @return the updated Journal object stored in PASS if the PASS object needs updating; null if we don't have
      * enough info to create a journal
@@ -343,7 +345,7 @@ public class PassDoiServlet extends HttpServlet {
         URI passJournalUri = find(name, issns);
 
         if (passJournalUri == null) {//we don't have this journal in pass yet
-            if(name != null && !name.isEmpty() && issns.size()>0) {//we have enough info to make a journal entry
+            if (name != null && !name.isEmpty() && issns.size() > 0) {//we have enough info to make a journal entry
                 passJournal = passClient.createAndReadResource(journal, Journal.class);
             } else {//do not have enough to create a new journal
                 LOG.debug("Not enough info for journal " + name);
@@ -355,23 +357,28 @@ public class PassDoiServlet extends HttpServlet {
             if (passJournal != null) {
                 //check to see if we can supply issns
                 if (!passJournal.getIssns().containsAll(journal.getIssns())) {
-                    List<String> newIssnList = Stream.concat(passJournal.getIssns().stream(), journal.getIssns().stream()).distinct().collect(Collectors.toList());
+                    List<String> newIssnList = Stream.concat(passJournal.getIssns().stream(),
+                                                             journal.getIssns().stream()).distinct()
+                                                     .collect(Collectors.toList());
                     passJournal.setIssns(newIssnList);
                     passClient.updateResource(passJournal);
                 }
 
             } else {
-                String uhoh = "Journal URI " + passJournalUri.toString() + " was found, but the object could not be retrieved. This should never happen.";
+                String uhoh = "Journal URI " + passJournalUri.toString() + " was found, but the object could not be " +
+                              "retrieved. This should never happen.";
                 LOG.error(uhoh);
                 throw new RuntimeException(uhoh);
             }
 
         }
         //externalize the internal journal id
-        String internalPrefix = System.getenv("PASS_FEDORA_BASEURL") != null ? System.getenv("PASS_FEDORA_BASEURL") : FEDORA_INTERNAL;
-        String externalPrefix = System.getenv("PASS_EXTERNAL_FEDORA_BASEURL") != null ? System.getenv("PASS_EXTERNAL_FEDORA_BASEURL") : FEDORA_EXTERNAL;
-        internalPrefix = internalPrefix + (internalPrefix.endsWith("/")?"":"/");
-        externalPrefix = externalPrefix + (externalPrefix.endsWith("/")?"":"/");
+        String internalPrefix = System.getenv("PASS_FEDORA_BASEURL") != null ? System.getenv(
+            "PASS_FEDORA_BASEURL") : FEDORA_INTERNAL;
+        String externalPrefix = System.getenv("PASS_EXTERNAL_FEDORA_BASEURL") != null ? System.getenv(
+            "PASS_EXTERNAL_FEDORA_BASEURL") : FEDORA_EXTERNAL;
+        internalPrefix = internalPrefix + (internalPrefix.endsWith("/") ? "" : "/");
+        externalPrefix = externalPrefix + (externalPrefix.endsWith("/") ? "" : "/");
         LOG.debug("Internal prefix: " + internalPrefix);
         LOG.debug("External prefix: " + externalPrefix);
         String internalUriString = passJournal.getId().toString();
@@ -386,7 +393,8 @@ public class PassDoiServlet extends HttpServlet {
     /**
      * Find a journal in our repository. We take the best match we can find. finder algorithm here should harmonize
      * with the approach in the {@code BatchJournalFinder} in the journal loader code
-     * @param name the name of the journal to be found
+     *
+     * @param name  the name of the journal to be found
      * @param issns the set of issns to find. we assume that the issns stored in the repo are of the format type:value
      * @return the URI of the best match, or null in nothing matches
      */
@@ -399,7 +407,7 @@ public class PassDoiServlet extends HttpServlet {
             for (String issn : issns) {
                 Set<URI> issnList = passClient.findAllByAttribute(Journal.class, "issns", issn);
                 if (issnList != null) {
-                    for(URI uri : issnList){
+                    for (URI uri : issnList) {
                         Integer i = uriScores.putIfAbsent(uri, 1);
                         if (i != null) {
                             uriScores.put(uri, i + 1);
@@ -418,20 +426,20 @@ public class PassDoiServlet extends HttpServlet {
             }
         }
 
-        if(uriScores.size()>0) {//we have matches, pick the best one
+        if (uriScores.size() > 0) {//we have matches, pick the best one
             Integer highScore = Collections.max(uriScores.values());
             int minimumQualifyingScore = 1;//with so little to go on, we may realistically get just one hit
             List<URI> sortedUris = new ArrayList<>();
 
             for (int i = highScore; i >= minimumQualifyingScore; i--) {
                 for (URI uri : uriScores.keySet()) {
-                    if(uriScores.get(uri) == i) {
+                    if (uriScores.get(uri) == i) {
                         sortedUris.add(uri);
                     }
                 }
             }
 
-            if (sortedUris.size() > 0 ) {// there are matching journals
+            if (sortedUris.size() > 0) {// there are matching journals
                 return sortedUris.get(0); //return the best match
             }
         } //nothing matches, create a new journal
@@ -440,6 +448,7 @@ public class PassDoiServlet extends HttpServlet {
 
     /**
      * check to see whether supplied DOI is in Crossref format after splitting off a possible prefix
+     *
      * @return the valid suffix, or null if invalid
      */
     String verify(String doi) {
@@ -448,7 +457,7 @@ public class PassDoiServlet extends HttpServlet {
         }
         String criterion = "doi.org/";
         int i = doi.indexOf(criterion);
-        String suffix = i>=0 ? doi.substring(i + criterion.length()) : doi;
+        String suffix = i >= 0 ? doi.substring(i + criterion.length()) : doi;
 
         Pattern pattern = Pattern.compile("^10\\.\\d{4,9}/[-._;()/:a-zA-Z0-9]+$");
 

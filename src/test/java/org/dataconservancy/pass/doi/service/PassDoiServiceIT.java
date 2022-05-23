@@ -16,22 +16,22 @@
  */
 package org.dataconservancy.pass.doi.service;
 
+import static java.lang.Thread.sleep;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import java.io.StringReader;
+import javax.json.Json;
+import javax.json.JsonObject;
+import javax.json.JsonReader;
+
 import okhttp3.Call;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import org.junit.Test;
-
-import javax.json.Json;
-import javax.json.JsonObject;
-import javax.json.JsonReader;
-
-import java.io.StringReader;
-
-
-import static java.lang.Thread.sleep;
-import static org.junit.Assert.*;
 
 /**
  * Integration Test Class for the doi service
@@ -46,6 +46,7 @@ public class PassDoiServiceIT {
 
     /**
      * throw in a "moo" doi, expect a 400 error
+     *
      * @throws Exception if something goes wrong
      */
     @Test
@@ -53,32 +54,34 @@ public class PassDoiServiceIT {
         HttpUrl.Builder urlBuilder = HttpUrl.parse(doiServiceUrl).newBuilder().addQueryParameter("doi", "moo");
         String url = urlBuilder.build().toString();
         Request okHttpRequest = new Request.Builder()
-                .url(url)
-                .build();
+            .url(url)
+            .build();
         Call call = client.newCall(okHttpRequest);
         try (Response okHttpResponse = call.execute()) {
             assertEquals(400, okHttpResponse.code());
             assertEquals("{\"error\":\"Supplied DOI is not in valid Crossref format.\"}",
-                    okHttpResponse.body().string());
+                         okHttpResponse.body().string());
         }
     }
 
     /**
      * test that a doi not corresponding to an actual crossref journal record is flagged
+     *
      * @throws Exception if something goes wrong
      */
     @Test
     public void noSuchXrefObjectTest() throws Exception {
-        HttpUrl.Builder urlBuilder = HttpUrl.parse(doiServiceUrl).newBuilder().addQueryParameter("doi", "10.1234/w.xyz.ABC");
+        HttpUrl.Builder urlBuilder = HttpUrl.parse(doiServiceUrl).newBuilder()
+                                            .addQueryParameter("doi", "10.1234/w.xyz.ABC");
         String url = urlBuilder.build().toString();
         Request okHttpRequest = new Request.Builder()
-                .url(url)
-                .build();
+            .url(url)
+            .build();
         Call call = client.newCall(okHttpRequest);
         try (Response okHttpResponse = call.execute()) {
             assertEquals(404, okHttpResponse.code());
             assertEquals("{\"error\":\"The resource for DOI 10.1234/w.xyz.ABC could not be found on Crossref.\"}",
-                    okHttpResponse.body().string());
+                         okHttpResponse.body().string());
         }
     }
 
@@ -86,6 +89,7 @@ public class PassDoiServiceIT {
      * test that an existing record on crossref is found, and a journal object is created for it
      * also show that requesting it again finds the existing PASS journal object, and that the crossref JSON objects are
      * the same
+     *
      * @throws Exception if something goes wrong
      */
     @Test
@@ -98,8 +102,8 @@ public class PassDoiServiceIT {
         HttpUrl.Builder urlBuilder = HttpUrl.parse(doiServiceUrl).newBuilder().addQueryParameter("doi", realDoi);
         String url = urlBuilder.build().toString();
         Request okHttpRequest = new Request.Builder()
-                .url(url)
-                .build();
+            .url(url)
+            .build();
         Call call = client.newCall(okHttpRequest);
         JsonReader jsonReader;
 
@@ -121,8 +125,8 @@ public class PassDoiServiceIT {
         urlBuilder = HttpUrl.parse(doiServiceUrl).newBuilder().addQueryParameter("doi", realDoi);
         url = urlBuilder.build().toString();
         okHttpRequest = new Request.Builder()
-                .url(url)
-                .build();
+            .url(url)
+            .build();
         call = client.newCall(okHttpRequest);
         try (Response okHttpResponse = call.execute()) {
             assertEquals(200, okHttpResponse.code());
@@ -134,8 +138,10 @@ public class PassDoiServiceIT {
     }
 
     /**
-     * test that a valid dois for a book gives the appropriate error - since it has no issns, it does not have sufficient
+     * test that a valid dois for a book gives the appropriate error - since it has no issns, it does not have
+     * sufficient
      * info to specify a journal
+     *
      * @throws Exception if something goes wrong
      */
     @Test
@@ -144,13 +150,13 @@ public class PassDoiServiceIT {
         HttpUrl.Builder urlBuilder = HttpUrl.parse(doiServiceUrl).newBuilder().addQueryParameter("doi", bookDoiChapter);
         String url = urlBuilder.build().toString();
         Request okHttpRequest = new Request.Builder()
-                .url(url)
-                .build();
+            .url(url)
+            .build();
         Call call = client.newCall(okHttpRequest);
         try (Response okHttpResponse = call.execute()) {
             assertEquals(422, okHttpResponse.code());
             assertEquals("{\"error\":\"Insufficient information to locate or specify a journal entry.\"}",
-                    okHttpResponse.body().string());
+                         okHttpResponse.body().string());
         }
     }
 
