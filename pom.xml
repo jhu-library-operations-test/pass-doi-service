@@ -139,6 +139,7 @@
   <build>
     <finalName>pass-doi-service</finalName>
     <plugins>
+      <!-- the purpose of this section is to provide an alternative to using the Spring boot parent pom -->
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
