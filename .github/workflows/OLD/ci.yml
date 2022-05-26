@@ -1,5 +1,5 @@
-name: pass-docker-services Continuous Integration
-on: [ pull_request, workflow_dispatch ]
+name: Continuous Integration
+on: [pull_request, workflow_dispatch]
 
 concurrency:
   group: ci-${{ github.head_ref || github.ref }}
@@ -12,16 +12,6 @@ jobs:
       - run: echo "This is a CI build of branch ${{ github.ref }} in repository ${{ github.repository }}"
       - run: echo "This job was triggered by a ${{ github.event_name }} event and is running on a ${{ runner.os }} server"
 
-  call-workaround:
-    name: Run Parent POM Workaround
-    uses: jhu-library-operations-test/pass-doi-service/.github/workflows/parent-pom-workaround.yml@main
-  
   call-tests-unit:
-    name: Run Unit Tests
+    name: Run Automated Tests
     uses: jhu-library-operations-test/pass-doi-service/.github/workflows/tests-unit.yml@main
-    needs: call-workaround
-    
-  call-tests-integration:
-    name: Run Integration Tests
-    uses: jhu-library-operations-test/pass-doi-service/.github/workflows/tests-integration.yml@main
-    needs: call-workaround
