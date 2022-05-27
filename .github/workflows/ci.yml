@@ -21,7 +21,7 @@ jobs:
     uses: jhu-library-operations-test/pass-doi-service/.github/workflows/tests-unit.yml@main
     needs: call-workaround
     
-  call-tests-integration:
-    name: Run Integration Tests
-    uses: jhu-library-operations-test/pass-doi-service/.github/workflows/tests-integration.yml@main
-    needs: call-workaround
+#  call-tests-integration:
+#    name: Run Integration Tests
+#    uses: jhu-library-operations-test/pass-doi-service/.github/workflows/tests-integration.yml@main
+#    needs: call-workaround
